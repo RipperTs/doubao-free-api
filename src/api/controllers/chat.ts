@@ -704,6 +704,7 @@ function createTransStream(stream: any, endCallback?: Function) {
       // console.log(rawResult);
       if (rawResult.code)
         throw new APIException(EX.API_REQUEST_FAILED, `[请求doubao失败]: ${rawResult.code}-${rawResult.message}`);
+
       if (rawResult.event_type == 2003) {
         transStream.write(`data: ${JSON.stringify({
           id: convId,
@@ -751,7 +752,9 @@ function createTransStream(stream: any, endCallback?: Function) {
       const message = result.message;
       if (!message || ![2001, 2008].includes(message.content_type))
         return;
+      // console.log(message)
       const content = JSON.parse(message.content);
+      const meta_infos = message?.meta_infos || [];
       if (content.text) {
         transStream.write(`data: ${JSON.stringify({
           id: convId,
@@ -767,6 +770,30 @@ function createTransStream(stream: any, endCallback?: Function) {
           created,
         })}\n\n`);
       }
+
+      if (meta_infos.length) {
+        for (const card of meta_infos){
+          let cardJson = JSON.parse(card.info);
+          let source_label = cardJson.website_name;
+          if (source_label.trim() === ''){
+            source_label = 'none';
+          }
+          transStream.write(`data: ${JSON.stringify({
+            id: convId,
+            model: MODEL_NAME,
+            object: "chat.completion.chunk",
+            choices: [
+              {
+                index: 0,
+                delta: { role: "assistant", content: ` [^${source_label}^](${cardJson.url}) ` },
+                finish_reason: null,
+              },
+            ],
+            created,
+          })}\n\n`);
+        }
+      }
+
     } catch (err) {
       logger.error(err);
       !transStream.closed && transStream.end("\n\n");
