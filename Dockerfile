@@ -1,4 +1,4 @@
-FROM node:lts AS BUILD_IMAGE
+FROM registry.cn-hangzhou.aliyuncs.com/ripper/node:lts AS BUILD_IMAGE
 
 WORKDIR /app
 
